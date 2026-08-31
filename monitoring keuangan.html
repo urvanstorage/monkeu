@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Laporan Keuangan Gibran</title>
+<title>Monitoring Keuangn Pribadi</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -296,7 +296,7 @@
   <aside class="sidebar">
     <div class="brand">
       <div class="mark">Buku Kas &middot; Personal</div>
-      <h1>Laporan Keuangan Gibran</h1>
+      <h1>Monitoring Keuangan Pribadi</h1>
       <div class="sub">Financial monitoring &amp; projection</div>
     </div>
     <nav class="tabs" id="nav-tabs">
@@ -349,7 +349,7 @@
     <!-- UPLOAD -->
     <section class="view" id="view-upload">
       <h2 class="view-title">Upload Data</h2>
-      <p class="view-desc">Unggah file laporan bulanan (.xls/.xlsx), atau file master "Laporan Keuangan Gibran.xlsx" untuk mengisi seluruh riwayat sekaligus. Transaksi yang identik dengan yang sudah tersimpan otomatis dilewati.</p>
+      <p class="view-desc">Unggah file laporan bulanan (.xls/.xlsx) untuk mengisi seluruh riwayat sekaligus. Transaksi yang identik dengan yang sudah tersimpan otomatis dilewati.</p>
 
       <div class="section-title first">Cadangkan &amp; Pulihkan Data</div>
       <div class="card">
@@ -526,10 +526,10 @@ const state = {
    The mode is auto-detected once at startup and shown to the
    user via the sidebar badge, so it's never a silent failure.
    ============================================================ */
-const LEDGER_KEY = 'gibran-ledger-v1';
-const CATMAP_KEY = 'gibran-category-map-v1';
-const MONTHNOTES_KEY = 'gibran-month-notes-v1';
-const LASTBACKUP_KEY = 'gibran-last-backup-v1';
+const LEDGER_KEY = 'ledger-v1';
+const CATMAP_KEY = 'category-map-v1';
+const MONTHNOTES_KEY = 'month-notes-v1';
+const LASTBACKUP_KEY = 'last-backup-v1';
 const memoryFallbackStore = {};
 let storageMode = 'memory'; // 'claude' | 'local' | 'memory'
 
@@ -1592,7 +1592,7 @@ async function exportBackup(){
   const exportedAt = new Date().toISOString();
   const backup = {
     formatVersion: 1,
-    appName: 'Laporan Keuangan Gibran',
+    appName: 'Monitoring Keuangan Pribadi',
     exportedAt,
     transactions: state.transactions.map(t => ({
       fp:t.fp, kategori:t.kategori, rekening:t.rekening, jumlah:t.jumlah,
@@ -1608,7 +1608,7 @@ async function exportBackup(){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `backup-laporan-keuangan-gibran-${exportedAt.slice(0,10)}.json`;
+    a.download = `backup-monitoring-keuangan-${exportedAt.slice(0,10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
