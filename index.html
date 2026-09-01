@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+
+<link rel="icon" type="image/png" href="favicon.png">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monitoring Keuangn Pribadi</title>
+<title>Monitoring Keuangan Pribadi</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -166,6 +169,10 @@
     text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
     padding:8px 10px; border-bottom:1px solid var(--line-strong); font-weight:500;
   }
+  thead th.sortable{cursor:pointer; user-select:none; white-space:nowrap;}
+  thead th.sortable:hover{color:var(--text);}
+  thead th.sortable .sort-arrow{margin-left:4px; font-size:10px; color:var(--gold); opacity:0;}
+  thead th.sortable.active .sort-arrow{opacity:1;}
   tbody td{padding:9px 10px; border-bottom:1px solid var(--line);}
   tbody tr:hover{background:rgba(233,231,222,0.03);}
   td.num, th.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums;}
@@ -203,6 +210,16 @@
   .chart-tooltip .tt-note{margin-top:8px; padding-top:8px; border-top:1px solid var(--line); color:var(--muted); font-size:11.5px; line-height:1.45; white-space:normal;}
   .hover-band{fill:transparent; cursor:pointer;}
   .hover-band:hover{fill:rgba(233,231,222,0.035);}
+
+  .subtotal-bar{
+    display:flex; gap:24px; flex-wrap:wrap; align-items:center;
+    padding:12px 4px 16px; margin-bottom:6px; border-bottom:1px solid var(--line-strong);
+  }
+  .subtotal-item{display:flex; flex-direction:column; gap:3px;}
+  .subtotal-item .label{font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);}
+  .subtotal-item .value{font-family:var(--mono); font-size:15.5px; font-variant-numeric:tabular-nums;}
+  .subtotal-item.income .value{color:var(--gold);}
+  .subtotal-item.expense .value{color:var(--coral);}
   label.field{display:flex; flex-direction:column; gap:5px; font-size:11.5px; color:var(--muted);}
 
   .controls-row{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px;}
@@ -1081,7 +1098,7 @@ function renderRingkasan(){
         <div class="accounts">
           ${accEntries.map(([acc,bal]) => `
             <div class="acc-chip">
-              <div class="acc-name">${acc}</div>
+              <div class="acc-name">${escXml(acc)}</div>
               <div class="acc-bal" style="color:${bal>=0?'var(--teal)':'var(--coral)'}">${fmtRp(bal)}</div>
             </div>`).join('')}
         </div>
@@ -1129,7 +1146,7 @@ function renderRingkasan(){
       <ul>
         <li>Rata-rata pemasukan <b>${fmtRp(ov.income/numMonths)}</b> dan pengeluaran <b>${fmtRp(ov.expense/numMonths)}</b> per bulan, dari ${numMonths} bulan data.</li>
         <li>Tingkat tabungan sepanjang waktu: <b>${fmtPct(savingsRate)}</b> dari total pemasukan.</li>
-        ${topCatAll ? `<li>Kategori pengeluaran terbesar sepanjang waktu: <b>${topCatAll[0]}</b> (${fmtRp(topCatAll[1])}, ${fmtPct(topCatAll[1]/ov.expense*100)} dari total pengeluaran).</li>` : ''}
+        ${topCatAll ? `<li>Kategori pengeluaran terbesar sepanjang waktu: <b>${escXml(topCatAll[0])}</b> (${fmtRp(topCatAll[1])}, ${fmtPct(topCatAll[1]/ov.expense*100)} dari total pengeluaran).</li>` : ''}
         <li>Total transfer/mutasi antar rekening &amp; pinjaman (di luar pemasukan/pengeluaran): masuk ${fmtRp(ov.transferIn)}, keluar ${fmtRp(ov.transferOut)}.</li>
       </ul>
     </div>
@@ -1264,13 +1281,13 @@ function renderBulananDetail(byMonth, monthsDesc){
         <div class="stat-label">Pengeluaran Tertinggi Bulan Ini</div>
         ${highestExpense ? `
           <div class="stat-value" style="font-size:19px; margin-top:10px;">${fmtRp(highestExpense.jumlah)}</div>
-          <div class="stat-sub">${highestExpense.catDisplay}${highestExpense.catatan?' &middot; '+highestExpense.catatan:''} &middot; ${fmtDate(highestExpense.tanggal)}</div>
+          <div class="stat-sub">${escXml(highestExpense.catDisplay)}${highestExpense.catatan?' &middot; '+escXml(highestExpense.catatan):''} &middot; ${fmtDate(highestExpense.tanggal)}</div>
         ` : '<div class="stat-sub" style="margin-top:10px;">Tidak ada pengeluaran bulan ini.</div>'}
       </div>
       <div class="card">
         <div class="stat-label">Kategori Pengeluaran Terbesar</div>
         ${topExpenseCat ? `
-          <div class="stat-value" style="font-size:19px; margin-top:10px; color:var(--coral)">${topExpenseCat[0]}</div>
+          <div class="stat-value" style="font-size:19px; margin-top:10px; color:var(--coral)">${escXml(topExpenseCat[0])}</div>
           <div class="stat-sub">${fmtRp(topExpenseCat[1])} &middot; ${fmtPct(topExpenseCat[1]/m.expense*100)} dari total pengeluaran</div>
         ` : '<div class="stat-sub" style="margin-top:10px;">Tidak ada pengeluaran bulan ini.</div>'}
       </div>
@@ -1325,7 +1342,7 @@ function renderBulananDetail(byMonth, monthsDesc){
   function catRow(cat, type, val, total){
     const pct = total>0 ? (val/total*100) : 0;
     return `<tr>
-      <td>${cat}</td>
+      <td>${escXml(cat)}</td>
       <td><span class="pill ${type}">${type==='income'?'Pemasukan':'Pengeluaran'}</span></td>
       <td class="num">${fmtRp(val)}</td>
       <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill ${type}" style="width:${pct}%"></div></div><span style="width:42px; text-align:right; color:var(--muted); font-family:var(--mono); font-size:11.5px;">${pct.toFixed(0)}%</span></div></td>
@@ -1365,10 +1382,16 @@ function renderTren(){
   const byMonth = monthlyBreakdown(state.transactions);
   const monthsAsc = sortedMonthKeys(byMonth, 'asc');
 
+  const allIncomeCats = {};
   const allExpenseCats = {};
-  for (const t of state.transactions){ if (t.bucket==='expense') allExpenseCats[t.catDisplay] = (allExpenseCats[t.catDisplay]||0)+t.jumlah; }
-  const catList = Object.keys(allExpenseCats).sort();
-  if (!selectedTrendCat || !catList.includes(selectedTrendCat)) selectedTrendCat = topEntries(allExpenseCats,1)[0] ? topEntries(allExpenseCats,1)[0][0] : catList[0];
+  for (const t of state.transactions){
+    if (t.bucket==='income') allIncomeCats[t.catDisplay] = (allIncomeCats[t.catDisplay]||0)+t.jumlah;
+    else if (t.bucket==='expense') allExpenseCats[t.catDisplay] = (allExpenseCats[t.catDisplay]||0)+t.jumlah;
+  }
+  const incomeCatList = Object.keys(allIncomeCats).sort();
+  const expenseCatList = Object.keys(allExpenseCats).sort();
+  const allTrendCats = [...incomeCatList, ...expenseCatList];
+  if (!selectedTrendCat || !allTrendCats.includes(selectedTrendCat)) selectedTrendCat = topEntries(allExpenseCats,1)[0] ? topEntries(allExpenseCats,1)[0][0] : allTrendCats[0];
 
   contentEl.innerHTML = `
     <div class="section-title first">Pemasukan vs Pengeluaran</div>
@@ -1386,7 +1409,10 @@ function renderTren(){
     <div class="section-title">Tren per Kategori</div>
     <div class="controls-row">
       <label class="field">Kategori
-        <select id="trend-cat-select">${catList.map(c=>`<option value="${c}" ${c===selectedTrendCat?'selected':''}>${c}</option>`).join('')}</select>
+        <select id="trend-cat-select">
+          <optgroup label="Pemasukan">${incomeCatList.map(c=>`<option value="${escXml(c)}" ${c===selectedTrendCat?'selected':''}>${escXml(c)}</option>`).join('')}</optgroup>
+          <optgroup label="Pengeluaran">${expenseCatList.map(c=>`<option value="${escXml(c)}" ${c===selectedTrendCat?'selected':''}>${escXml(c)}</option>`).join('')}</optgroup>
+        </select>
       </label>
     </div>
     <div class="card">
@@ -1430,11 +1456,13 @@ function renderTren(){
   renderTrendCatChart(monthsAsc);
 
   function renderTrendCatChart(monthsAsc){
-    renderLegend('legend-trend-cat', [{label:selectedTrendCat, color:'#4FB6A8'}]);
+    const isIncome = incomeCatList.includes(selectedTrendCat);
+    const color = isIncome ? '#D9A441' : '#4FB6A8';
+    renderLegend('legend-trend-cat', [{label:`${selectedTrendCat} (${isIncome?'Pemasukan':'Pengeluaran'})`, color}]);
     renderAxisChart('chart-trend-cat', {
       labels: monthsAsc.map(monthLabelShort),
       tooltipLabels: monthsAsc.map(monthLabel),
-      series:[{ name:selectedTrendCat, data: monthsAsc.map(k=>byMonth[k].expenseCats[selectedTrendCat]||0), color:'#4FB6A8', type:'line', fill:true }],
+      series:[{ name:selectedTrendCat, data: monthsAsc.map(k => (isIncome ? byMonth[k].incomeCats[selectedTrendCat] : byMonth[k].expenseCats[selectedTrendCat]) || 0), color, type:'line', fill:true }],
       notes: monthsAsc.map(k => state.monthNotes[k] || null),
     });
   }
@@ -1445,6 +1473,16 @@ function renderTren(){
    ============================================================ */
 let txnPage = 0;
 const TXN_PAGE_SIZE = 25;
+let txnSortCol = 'tanggal';
+let txnSortDir = 'desc';
+const TXN_SORT_COLS = {
+  tanggal: {label:'Tanggal', type:'date'},
+  catDisplay: {label:'Kategori', type:'string'},
+  rekening: {label:'Rekening', type:'string'},
+  catatan: {label:'Catatan', type:'string'},
+  bucket: {label:'Tipe', type:'string'},
+  jumlah: {label:'Jumlah', type:'number', numClass:true},
+};
 
 function renderTransaksi(){
   const emptyEl = document.getElementById('transaksi-empty');
@@ -1458,8 +1496,16 @@ function renderTransaksi(){
 
   const byMonth = monthlyBreakdown(state.transactions);
   const monthsDesc = sortedMonthKeys(byMonth, 'desc');
-  const cats = Array.from(new Set(state.transactions.map(t=>t.catDisplay))).sort();
+  const catBucketMap = {};
+  for (const t of state.transactions){ catBucketMap[t.catDisplay] = t.bucket; }
+  const catsIncome = Object.keys(catBucketMap).filter(c=>catBucketMap[c]==='income').sort();
+  const catsExpense = Object.keys(catBucketMap).filter(c=>catBucketMap[c]==='expense').sort();
+  const catsTransfer = Object.keys(catBucketMap).filter(c=>catBucketMap[c]==='transfer').sort();
   const accs = Array.from(new Set(state.transactions.map(t=>t.rekening).filter(Boolean))).sort();
+
+  const theadCells = Object.entries(TXN_SORT_COLS).map(([col,cfg]) =>
+    `<th class="sortable${cfg.numClass?' num':''}" data-sort="${col}">${cfg.label}<span class="sort-arrow"></span></th>`
+  ).join('');
 
   contentEl.innerHTML = `
     <div class="controls-row">
@@ -1467,10 +1513,15 @@ function renderTransaksi(){
         <select id="f-month"><option value="">Semua</option>${monthsDesc.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join('')}</select>
       </label>
       <label class="field">Kategori
-        <select id="f-cat"><option value="">Semua</option>${cats.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
+        <select id="f-cat">
+          <option value="">Semua</option>
+          ${catsIncome.length ? `<optgroup label="Pemasukan">${catsIncome.map(c=>`<option value="${escXml(c)}">${escXml(c)}</option>`).join('')}</optgroup>` : ''}
+          ${catsExpense.length ? `<optgroup label="Pengeluaran">${catsExpense.map(c=>`<option value="${escXml(c)}">${escXml(c)}</option>`).join('')}</optgroup>` : ''}
+          ${catsTransfer.length ? `<optgroup label="Transfer / Pinjaman">${catsTransfer.map(c=>`<option value="${escXml(c)}">${escXml(c)}</option>`).join('')}</optgroup>` : ''}
+        </select>
       </label>
       <label class="field">Rekening
-        <select id="f-acc"><option value="">Semua</option>${accs.map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
+        <select id="f-acc"><option value="">Semua</option>${accs.map(a=>`<option value="${escXml(a)}">${escXml(a)}</option>`).join('')}</select>
       </label>
       <label class="field">Tipe
         <select id="f-bucket"><option value="">Semua</option><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option><option value="transfer">Transfer</option></select>
@@ -1480,8 +1531,9 @@ function renderTransaksi(){
       </label>
     </div>
     <div class="card">
+      <div class="subtotal-bar" id="txn-subtotal"></div>
       <table>
-        <thead><tr><th>Tanggal</th><th>Kategori</th><th>Rekening</th><th>Catatan</th><th>Tipe</th><th class="num">Jumlah</th></tr></thead>
+        <thead><tr>${theadCells}</tr></thead>
         <tbody id="txn-tbody"></tbody>
       </table>
       <div class="pagination" id="txn-pagination"></div>
@@ -1490,8 +1542,29 @@ function renderTransaksi(){
 
   ['f-month','f-cat','f-acc','f-bucket'].forEach(id => document.getElementById(id).addEventListener('change', () => { txnPage=0; renderTxnTable(); }));
   document.getElementById('f-search').addEventListener('input', () => { txnPage=0; renderTxnTable(); });
+  document.querySelectorAll('#transaksi-content thead th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (txnSortCol === col){
+        txnSortDir = txnSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        txnSortCol = col;
+        txnSortDir = (col==='tanggal' || col==='jumlah') ? 'desc' : 'asc';
+      }
+      txnPage = 0;
+      renderTxnTable();
+    });
+  });
 
   renderTxnTable();
+}
+
+function updateSortHeaderIndicators(){
+  document.querySelectorAll('#transaksi-content thead th.sortable').forEach(th => {
+    const isActive = th.dataset.sort === txnSortCol;
+    th.classList.toggle('active', isActive);
+    th.querySelector('.sort-arrow').textContent = isActive ? (txnSortDir==='asc'?'\u25B2':'\u25BC') : '';
+  });
 }
 
 function renderTxnTable(){
@@ -1509,7 +1582,33 @@ function renderTxnTable(){
     if (search && !(t.catatan||'').toLowerCase().includes(search)) return false;
     return true;
   });
-  list.sort((a,b) => b.tanggal - a.tanggal);
+
+  let subIncome = 0, subExpense = 0, subTransfer = 0;
+  for (const t of list){
+    if (t.bucket==='income') subIncome += t.jumlah;
+    else if (t.bucket==='expense') subExpense += t.jumlah;
+    else subTransfer += t.jumlah;
+  }
+  const subNet = subIncome - subExpense;
+  const anyFilterActive = !!(month || cat || acc || bucket || search);
+  document.getElementById('txn-subtotal').innerHTML = `
+    <div class="subtotal-item"><span class="label">${anyFilterActive?'Ditemukan':'Total'}</span><span class="value">${fmtNum(list.length)} transaksi</span></div>
+    <div class="subtotal-item income"><span class="label">Pemasukan</span><span class="value">${fmtRp(subIncome)}</span></div>
+    <div class="subtotal-item expense"><span class="label">Pengeluaran</span><span class="value">${fmtRp(subExpense)}</span></div>
+    <div class="subtotal-item"><span class="label">Selisih</span><span class="value" style="color:${subNet>=0?'var(--teal)':'var(--coral)'}">${fmtRp(subNet)}</span></div>
+    ${subTransfer!==0 ? `<div class="subtotal-item"><span class="label">Transfer</span><span class="value" style="color:var(--muted)">${fmtRp(subTransfer)}</span></div>` : ''}
+  `;
+
+  const colType = (TXN_SORT_COLS[txnSortCol]||{}).type || 'date';
+  list.sort((a,b) => {
+    let cmp;
+    if (colType === 'date') cmp = a.tanggal - b.tanggal;
+    else if (colType === 'number') cmp = a.jumlah - b.jumlah;
+    else cmp = String(a[txnSortCol]||'').localeCompare(String(b[txnSortCol]||''), 'id');
+    if (cmp === 0) cmp = a.tanggal - b.tanggal; // stable tie-break by date
+    return txnSortDir === 'asc' ? cmp : -cmp;
+  });
+  updateSortHeaderIndicators();
 
   const totalPages = Math.max(1, Math.ceil(list.length / TXN_PAGE_SIZE));
   txnPage = Math.min(txnPage, totalPages-1);
@@ -1518,16 +1617,15 @@ function renderTxnTable(){
   document.getElementById('txn-tbody').innerHTML = pageItems.map(t => `
     <tr>
       <td>${fmtDate(t.tanggal)}</td>
-      <td>${t.catDisplay}</td>
-      <td>${t.rekening||'-'}</td>
-      <td>${t.catatan||'-'}</td>
+      <td>${escXml(t.catDisplay)}</td>
+      <td>${escXml(t.rekening)||'-'}</td>
+      <td>${escXml(t.catatan)||'-'}</td>
       <td><span class="pill ${t.bucket}">${t.bucket==='income'?'Masuk':t.bucket==='expense'?'Keluar':'Transfer'}</span></td>
       <td class="num" style="color:${t.tipe==='+'?'var(--gold)':'var(--coral)'}">${t.tipe==='+'?'+':'-'}${fmtRp(t.jumlah)}</td>
     </tr>
   `).join('') || `<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:24px;">Tidak ada transaksi yang cocok.</td></tr>`;
 
   document.getElementById('txn-pagination').innerHTML = `
-    <span>${list.length} transaksi</span>
     <button class="btn" id="txn-prev" ${txnPage<=0?'disabled':''}>&larr; Sebelumnya</button>
     <span>Hal ${txnPage+1} / ${totalPages}</span>
     <button class="btn" id="txn-next" ${txnPage>=totalPages-1?'disabled':''}>Selanjutnya &rarr;</button>
@@ -1550,7 +1648,7 @@ function renderUpload(){
   wrap.innerHTML = state.uploads.map(u => `
     <div class="upload-row">
       <div>
-        <div>${u.filename}</div>
+        <div>${escXml(u.filename)}</div>
         <div class="meta">${new Date(u.uploadedAt).toLocaleString('id-ID')} &middot; ${u.addedCount} transaksi ditambahkan${u.duplicateCount?', '+u.duplicateCount+' duplikat dilewati':''}</div>
       </div>
       <button class="btn danger" data-batch="${u.id}">Hapus</button>
@@ -1608,7 +1706,7 @@ async function exportBackup(){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `backup-monitoring-keuangan-${exportedAt.slice(0,10)}.json`;
+    a.download = `backup-laporan-keuangan-${exportedAt.slice(0,10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1711,10 +1809,10 @@ function renderPengaturan(){
     return `
     <div class="cat-map-row">
       <div>
-        <div class="cname">${display}</div>
+        <div class="cname">${escXml(display)}</div>
         <div class="ccount">${counts[key]} transaksi</div>
       </div>
-      <select data-catkey="${key}">
+      <select data-catkey="${escXml(key)}">
         <option value="income" ${bucket==='income'?'selected':''}>Pemasukan</option>
         <option value="expense" ${bucket==='expense'?'selected':''}>Pengeluaran</option>
         <option value="transfer" ${bucket==='transfer'?'selected':''}>Transfer / Pinjaman</option>
